@@ -1,3 +1,18 @@
+DO $$ 
+DECLARE
+    rec RECORD;
+BEGIN
+    FOR rec IN 
+        SELECT constraint_name, definition
+        FROM constraint_backup
+        WHERE schema_name = 'public' -- Ganti dengan schema yang sesuai
+        AND table_name = 'my_table' -- Ganti dengan nama tabel yang sesuai
+    LOOP
+        EXECUTE rec.definition;
+    END LOOP;
+END $$;
+
+
 -- Contoh: Menghapus semua constraint di tabel "my_table" pada schema "public" dan membackupnya
 SELECT remove_constraints_and_backup('public', 'my_table');
 

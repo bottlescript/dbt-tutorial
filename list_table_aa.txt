@@ -2,13 +2,21 @@ DO $$
 DECLARE
     rec RECORD;
 BEGIN
+    -- Loop untuk membaca kembali dan menambah constraint yang dibackup
     FOR rec IN 
         SELECT constraint_name, definition
         FROM constraint_backup
         WHERE schema_name = 'public' -- Ganti dengan schema yang sesuai
         AND table_name = 'my_table' -- Ganti dengan nama tabel yang sesuai
     LOOP
-        EXECUTE rec.definition;
+        -- Menambahkan kembali constraint menggunakan definisi yang dibackup
+        BEGIN
+            EXECUTE rec.definition;
+        EXCEPTION
+            WHEN others THEN
+                -- Tangani error jika definisi tidak bisa diterapkan
+                RAISE NOTICE 'Gagal menambahkan constraint: %', rec.constraint_name;
+        END;
     END LOOP;
 END $$;
 

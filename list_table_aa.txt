@@ -1,3 +1,60 @@
+CREATE OR REPLACE FUNCTION remove_constraints_and_backup(p_schema_name TEXT, p_table_name TEXT)
+RETURNS void AS $$
+DECLARE
+    rec RECORD;
+BEGIN
+    -- Loop untuk membaca semua constraint dari tabel dan schema tertentu
+    FOR rec IN
+        SELECT 
+            conname AS constraint_name,
+            contype AS constraint_type,
+            pg_catalog.pg_get_constraintdef(oid) AS definition
+        FROM pg_constraint
+        WHERE conrelid = (
+            SELECT oid 
+            FROM pg_class 
+            WHERE relname = p_table_name 
+            AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = p_schema_name)
+        )
+    LOOP
+        -- Backup constraint ke tabel backup
+        INSERT INTO constraint_backup (schema_name, table_name, constraint_name, constraint_type, definition)
+        VALUES (p_schema_name, p_table_name, rec.constraint_name, rec.constraint_type, rec.definition);
+
+        -- Menghapus constraint
+        EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT IF EXISTS %I', p_schema_name, p_table_name, rec.constraint_name);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+--
+
+CREATE OR REPLACE FUNCTION restore_constraints(p_schema_name TEXT, p_table_name TEXT)
+RETURNS void AS $$
+DECLARE
+    rec RECORD;
+BEGIN
+    -- Loop untuk membaca constraint yang dibackup
+    FOR rec IN
+        SELECT constraint_name, definition
+        FROM constraint_backup
+        WHERE schema_name = p_schema_name
+        AND table_name = p_table_name
+    LOOP
+        -- Menambahkan kembali constraint
+        EXECUTE format('ALTER TABLE %I.%I ADD CONSTRAINT %I %s', 
+            p_schema_name, 
+            p_table_name, 
+            rec.constraint_name, 
+            rec.definition);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+--
+
+
+
 DO $$ 
 DECLARE
     rec RECORD;

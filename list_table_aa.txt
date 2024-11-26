@@ -1,3 +1,7 @@
+-- Contoh: Menghapus semua constraint di tabel "my_table" pada schema "public" dan membackupnya
+SELECT remove_constraints_and_backup('public', 'my_table');
+
+
 CREATE TABLE IF NOT EXISTS constraint_backup (
     schema_name TEXT,
     table_name TEXT,
